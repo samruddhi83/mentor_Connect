@@ -1,9 +1,8 @@
 package middleware
 
 import (
+	"MentorConnect/utils"
 	"net/http"
-
-	"mentor-connect/utils"
 
 	"github.com/gin-gonic/gin"
 )

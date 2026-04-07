@@ -1,12 +1,11 @@
 package middleware
 
 import (
+	"MentorConnect/utils"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
-
-	"mentor-connect/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

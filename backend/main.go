@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"mentor-connect/db"
-	"mentor-connect/router"
+	"MentorConnect/db"
+	"MentorConnect/router"
 
 	"github.com/joho/godotenv"
 )
@@ -14,20 +14,20 @@ func main() {
 	// Load environment variables
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("Not using .env file or it could not be loaded")
+		log.Println("No .env file found")
 	}
 
 	// Connect to database
 	db.ConnectDB()
 
-	// Setup Router
+	// Setup routes
 	r := router.SetupRouter()
 
+	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-
 	log.Printf("Server starting on port %s", port)
-	r.Run(":" + port)
+	log.Fatal(r.Run(":" + port))
 }

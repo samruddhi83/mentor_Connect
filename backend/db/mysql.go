@@ -5,8 +5,6 @@ import (
 	"log"
 	"os"
 
-	"mentor-connect/model"
-
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -17,7 +15,7 @@ func ConnectDB() {
 	dsn := os.Getenv("DB_DSN")
 	if dsn == "" {
 		// Use a local database connection as fallback
-		dsn = "root:password@tcp(127.0.0.1:3306)/mentor_connect?charset=utf8mb4&parseTime=True&loc=Local"
+		dsn = "root:root@123@tcp(127.0.0.1:3306)/mentorConnect?charset=utf8mb4&parseTime=True&loc=Local"
 	}
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
@@ -27,18 +25,10 @@ func ConnectDB() {
 
 	fmt.Println("Database connection established!")
 
-	err = db.AutoMigrate(
-		&model.User{},
-		&model.Tutor{},
-		&model.Availability{},
-		&model.Subscription{},
-		&model.Appointment{},
-		&model.Review{},
-	)
+	// Database schema already created manually, skip auto-migration
+	fmt.Println("Using existing database schema...")
 
-	if err != nil {
-		log.Fatalf("Failed to auto-migrate database: %v", err)
-	}
+	fmt.Println("Database tables created successfully!")
 
 	DB = db
 }

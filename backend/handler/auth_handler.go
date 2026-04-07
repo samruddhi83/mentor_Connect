@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	"mentor-connect/db"
-	"mentor-connect/model"
-	"mentor-connect/utils"
+	"MentorConnect/db"
+	"MentorConnect/model"
+	"MentorConnect/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,10 +15,11 @@ import (
 )
 
 type RegisterReq struct {
-	FullName string `json:"full_name" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
-	Role     string `json:"role" binding:"required,oneof=learner tutor"`
+	FirstName string `json:"first_name" binding:"required"`
+	LastName  string `json:"last_name" binding:"required"`
+	Email     string `json:"email" binding:"required,email"`
+	Password  string `json:"password" binding:"required,min=6"`
+	Role      string `json:"role" binding:"required,oneof=learner tutor"`
 }
 
 type LoginReq struct {
@@ -47,10 +48,11 @@ func Register(c *gin.Context) {
 	}
 
 	user := model.User{
-		FullName: req.FullName,
-		Email:    req.Email,
-		Password: string(hashedPwd),
-		Role:     req.Role,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Email:        req.Email,
+		PasswordHash: string(hashedPwd),
+		Role:         req.Role,
 	}
 
 	if err := db.DB.Create(&user).Error; err != nil {
@@ -60,7 +62,7 @@ func Register(c *gin.Context) {
 
 	// If tutor, automatically create a tutor profile stub
 	if user.Role == "tutor" {
-		tutor := model.Tutor{UserID: user.ID}
+		tutor := model.TutorProfile{UserID: user.ID}
 		db.DB.Create(&tutor)
 	}
 
@@ -80,7 +82,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		utils.SendError(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}

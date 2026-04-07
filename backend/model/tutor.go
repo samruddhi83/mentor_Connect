@@ -3,7 +3,6 @@ package model
 type Tutor struct {
 	ID              uint    `gorm:"primaryKey" json:"id"`
 	UserID          uint    `gorm:"uniqueIndex;not null" json:"user_id"`
-	User            User    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"user,omitempty"`
 	Bio             string  `gorm:"type:text" json:"bio"`
 	Skills          string  `gorm:"type:text" json:"skills"` // Comma separated or JSON string
 	Topics          string  `gorm:"type:text" json:"topics"` // Comma separated or JSON string

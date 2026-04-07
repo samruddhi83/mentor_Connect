@@ -1,8 +1,8 @@
 package router
 
 import (
-	"mentor-connect/handler"
-	"mentor-connect/middleware"
+	"MentorConnect/handler"
+	"MentorConnect/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,6 +33,15 @@ func SetupRouter() *gin.Engine {
 			auth.GET("/profile", middleware.AuthMiddleware(), handler.GetProfile)
 		}
 
+		// Profile routes
+		profile := api.Group("/profile")
+		profile.Use(middleware.AuthMiddleware())
+		{
+			profile.GET("/", handler.GetMyProfile)
+			profile.PUT("/", handler.UpdateMyProfile)
+			profile.GET("/:id", handler.GetPublicProfile)
+		}
+
 		// Tutor routes
 		tutors := api.Group("/tutors")
 		{
@@ -42,12 +51,17 @@ func SetupRouter() *gin.Engine {
 			tutors.DELETE("/:id", middleware.AuthMiddleware(), middleware.RoleMiddleware("tutor"), handler.DeleteTutor)
 		}
 
+		// Available slots endpoint
+		api.GET("/slots", handler.GetAvailableSlots)
+
 		// Availability
 		availability := api.Group("/availability")
+		availability.Use(middleware.AuthMiddleware())
 		{
-			availability.GET("/:tutorId", handler.GetAvailability)
-			availability.POST("/", middleware.AuthMiddleware(), middleware.RoleMiddleware("tutor"), handler.AddAvailability)
-			availability.DELETE("/:id", middleware.AuthMiddleware(), middleware.RoleMiddleware("tutor"), handler.DeleteAvailability)
+			availability.GET("/", handler.GetAvailability)
+			availability.POST("/", middleware.RoleMiddleware("tutor"), handler.AddAvailability)
+			availability.POST("/bulk", middleware.RoleMiddleware("tutor"), handler.AddBulkAvailability)
+			availability.DELETE("/:id", middleware.RoleMiddleware("tutor"), handler.DeleteAvailability)
 		}
 
 		// Subscriptions

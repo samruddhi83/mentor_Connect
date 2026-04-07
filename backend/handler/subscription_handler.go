@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"mentor-connect/db"
-	"mentor-connect/model"
-	"mentor-connect/utils"
+	"MentorConnect/db"
+	"MentorConnect/model"
+	"MentorConnect/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,19 +41,15 @@ func Subscribe(c *gin.Context) {
 		return
 	}
 
-	// Deactivate active subscriptions for this learner
-	db.DB.Model(&model.Subscription{}).Where("learner_id = ? AND active = ?", userID, true).Update("active", false)
+	// Deactivate active subscriptions for this user
+	db.DB.Model(&model.UserSubscription{}).Where("user_id = ? AND status = ?", userID, "active").Update("status", "expired")
 
-	sub := model.Subscription{
-		LearnerID:      userID.(uint),
-		PlanName:       req.PlanName,
-		Price:          planDetails.Price,
-		SessionLimit:   planDetails.SessionLimit,
-		SessionsUsed:   0,
-		DurationInDays: planDetails.Duration,
-		StartDate:      time.Now(),
-		EndDate:        time.Now().AddDate(0, 0, planDetails.Duration),
-		Active:         true,
+	sub := model.UserSubscription{
+		UserID:    userID.(uint),
+		PlanID:    getPlanIDByName(req.PlanName),
+		StartDate: time.Now(),
+		EndDate:   time.Now().AddDate(0, 0, planDetails.Duration),
+		Status:    "active",
 	}
 
 	if err := db.DB.Create(&sub).Error; err != nil {
@@ -67,11 +63,26 @@ func Subscribe(c *gin.Context) {
 func GetMySubscription(c *gin.Context) {
 	userID, _ := c.Get("userID")
 
-	var sub model.Subscription
-	if err := db.DB.Where("learner_id = ? AND active = ?", userID, true).First(&sub).Error; err != nil {
+	var sub model.UserSubscription
+	if err := db.DB.Where("user_id = ? AND status = ?", userID, "active").First(&sub).Error; err != nil {
 		utils.SendSuccess(c, http.StatusOK, "No active subscription", nil)
 		return
 	}
 
 	utils.SendSuccess(c, http.StatusOK, "Active subscription retrieved", sub)
+}
+
+// getPlanIDByName returns the plan ID for a given plan name
+func getPlanIDByName(planName string) int {
+	planMap := map[string]int{
+		"Free Plan":    1,
+		"Basic Plan":   2,
+		"Pro Plan":     3,
+		"Premium Plan": 4,
+	}
+
+	if id, exists := planMap[planName]; exists {
+		return id
+	}
+	return 1 // Default to Free Plan
 }

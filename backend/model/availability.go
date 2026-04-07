@@ -1,10 +1,15 @@
 package model
 
-type Availability struct {
-	ID        uint   `gorm:"primaryKey" json:"id"`
-	TutorID   uint   `gorm:"index;not null" json:"tutor_id"`
-	Tutor     Tutor  `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"tutor,omitempty"`
-	Day       string `gorm:"size:20;not null" json:"day"`        // e.g. Monday, Tuesday
-	StartTime string `gorm:"size:10;not null" json:"start_time"` // e.g. 09:00
-	EndTime   string `gorm:"size:10;not null" json:"end_time"`   // e.g. 17:00
+import (
+	"time"
+)
+
+type TutorAvailability struct {
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	TutorID       uint      `gorm:"not null" json:"tutor_id"`
+	AvailableDate time.Time `gorm:"type:date;not null" json:"available_date"`
+	StartTime     time.Time `gorm:"type:time;not null" json:"start_time"`
+	EndTime       time.Time `gorm:"type:time;not null" json:"end_time"`
+	IsBooked      bool      `gorm:"default:false" json:"is_booked"`
+	CreatedAt     time.Time `json:"created_at"`
 }

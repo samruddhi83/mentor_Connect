@@ -1,17 +1,27 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
-type Subscription struct {
-	ID             uint      `gorm:"primaryKey" json:"id"`
-	LearnerID      uint      `gorm:"index;not null" json:"learner_id"`
-	User           User      `gorm:"foreignKey:LearnerID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"user,omitempty"`
-	PlanName       string    `gorm:"size:100;not null" json:"plan_name"` // Free, Basic, Pro, Premium
-	Price          float64   `json:"price"`
-	SessionLimit   int       `json:"session_limit"` // Number of sessions allowed
-	SessionsUsed   int       `json:"sessions_used"` // Number of sessions booked
-	DurationInDays int       `json:"duration_in_days"`
-	StartDate      time.Time `json:"start_date"`
-	EndDate        time.Time `json:"end_date"`
-	Active         bool      `gorm:"default:true" json:"active"`
+type SubscriptionPlan struct {
+	ID                     int       `gorm:"primaryKey" json:"id"`
+	Name                   string    `gorm:"size:100;not null" json:"name"`
+	Description            string    `gorm:"type:text" json:"description"`
+	Price                  float64   `gorm:"type:decimal(10,2);not null;default:0" json:"price"`
+	DurationDays           int       `gorm:"not null" json:"duration_days"`
+	MaxBookingsPerMonth    int       `json:"max_bookings_per_month"`
+	MeetingDurationMinutes int       `json:"meeting_duration_minutes"`
+	IsFree                 bool      `gorm:"default:false" json:"is_free"`
+	CreatedAt              time.Time `json:"created_at"`
+}
+
+type UserSubscription struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	UserID    uint      `gorm:"not null" json:"user_id"`
+	PlanID    int       `gorm:"not null" json:"plan_id"`
+	StartDate time.Time `gorm:"type:date;not null" json:"start_date"`
+	EndDate   time.Time `gorm:"type:date;not null" json:"end_date"`
+	Status    string    `gorm:"type:enum('active', 'expired', 'cancelled');default:'active'" json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }

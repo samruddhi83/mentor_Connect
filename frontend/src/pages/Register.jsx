@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 
 function Register() {
-  const [formData, setFormData] = useState({ fullName: '', email: '', password: '', role: 'learner' });
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'learner' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,7 +15,8 @@ function Register() {
     setError('');
     try {
       const res = await api.post('/auth/register', {
-        full_name: formData.fullName,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
         email: formData.email,
         password: formData.password,
         role: formData.role
@@ -41,7 +42,8 @@ function Register() {
         </Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Box component="form" onSubmit={handleRegister}>
-          <TextField margin="normal" required fullWidth label="Full Name" value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} />
+          <TextField margin="normal" required fullWidth label="First Name" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+          <TextField margin="normal" required fullWidth label="Last Name" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
           <TextField margin="normal" required fullWidth label="Email Address" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
           <TextField margin="normal" required fullWidth label="Password" type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
           <TextField select margin="normal" required fullWidth label="I am a..." value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>

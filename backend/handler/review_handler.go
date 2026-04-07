@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"mentor-connect/db"
-	"mentor-connect/model"
-	"mentor-connect/utils"
+	"MentorConnect/db"
+	"MentorConnect/model"
+	"MentorConnect/utils"
 
 	"github.com/gin-gonic/gin"
 )

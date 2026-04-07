@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"mentor-connect/db"
-	"mentor-connect/model"
-	"mentor-connect/utils"
+	"MentorConnect/db"
+	"MentorConnect/model"
+	"MentorConnect/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,32 +29,78 @@ func parseTimeStr(t string) (int, error) {
 
 func BookAppointment(c *gin.Context) {
 	userID, _ := c.Get("userID")
-
 	var req AppointmentReq
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.SendError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if req.Duration != 15 && req.Duration != 30 {
-		utils.SendError(c, http.StatusBadRequest, "Duration must be 15 or 30 minutes")
+	// Parse date and time
+	appointmentDate, err := time.Parse("2006-01-02", req.AppointmentDate)
+	if err != nil {
+		utils.SendError(c, http.StatusBadRequest, "Invalid date format. Use YYYY-MM-DD")
+		return
+	}
+
+	appointmentTime, err := time.Parse("15:04", req.AppointmentTime)
+	if err != nil {
+		utils.SendError(c, http.StatusBadRequest, "Invalid time format. Use HH:MM")
+		return
+	}
+
+	// Validate duration
+	if req.Duration != 15 && req.Duration != 30 && req.Duration != 60 {
+		utils.SendError(c, http.StatusBadRequest, "Duration must be 15, 30, or 60 minutes")
+		return
+	}
+
+	// Check if tutor availability exists for the requested slot
+	var availability model.TutorAvailability
+	if err := db.DB.Where("tutor_id = ? AND available_date = ? AND start_time <= ? AND end_time >= ? AND is_booked = ?",
+		req.TutorID, appointmentDate, appointmentTime, appointmentTime.Add(time.Duration(req.Duration)*time.Minute), false).First(&availability).Error; err != nil {
+		utils.SendError(c, http.StatusNotFound, "Requested time slot is not available")
+		return
+	}
+
+	// Check for existing appointments at the same time
+	var existingAppointment model.Appointment
+	endTime := appointmentTime.Add(time.Duration(req.Duration) * time.Minute)
+	if err := db.DB.Where("tutor_id = ? AND appointment_date = ? AND ((appointment_time <= ? AND appointment_time + INTERVAL duration MINUTE > ?) OR (appointment_time < ? AND appointment_time + INTERVAL duration MINUTE >= ?))",
+		req.TutorID, appointmentDate, appointmentTime, appointmentTime, endTime, endTime).First(&existingAppointment).Error; err == nil {
+		utils.SendError(c, http.StatusConflict, "Time slot is already booked")
 		return
 	}
 
 	// 1. Check Subscriptions
-	var sub model.Subscription
-	if err := db.DB.Where("learner_id = ? AND active = ?", userID, true).First(&sub).Error; err != nil {
+	var sub model.UserSubscription
+	if err := db.DB.Where("user_id = ? AND status = ?", userID, "active").First(&sub).Error; err != nil {
 		utils.SendError(c, http.StatusPaymentRequired, "Active subscription required to book")
 		return
 	}
 
-	if sub.SessionsUsed >= sub.SessionLimit && sub.SessionLimit != 999 {
-		utils.SendError(c, http.StatusForbidden, "Session limit reached for your plan")
+	// Get plan details to validate subscription constraints
+	plan, err := getPlanDetails(sub.PlanID)
+	if err != nil {
+		utils.SendError(c, http.StatusInternalServerError, "Invalid plan")
 		return
 	}
 
-	if req.Duration == 30 && (sub.PlanName == "Free" || sub.PlanName == "Basic") {
-		utils.SendError(c, http.StatusForbidden, "Your plan only supports 15-minute sessions")
+	// Check if user has exceeded session limit (simplified validation)
+	if plan.MaxBookingsPerMonth > 0 {
+		// Count existing appointments this month
+		var appointmentCount int64
+		db.DB.Model(&model.Appointment{}).Where("learner_id = ? AND DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')", userID).Count(&appointmentCount)
+
+		if int(appointmentCount) >= plan.MaxBookingsPerMonth {
+			utils.SendError(c, http.StatusForbidden, "Session limit reached for your plan")
+			return
+		}
+	}
+
+	// Check duration constraints
+	if plan.MeetingDurationMinutes < req.Duration {
+		utils.SendError(c, http.StatusForbidden, "Your plan only supports shorter sessions")
 		return
 	}
 
@@ -67,7 +113,7 @@ func BookAppointment(c *gin.Context) {
 	reqEndMins := reqStartMins + req.Duration
 
 	var existingAppointments []model.Appointment
-	db.DB.Where("tutor_id = ? AND appointment_date = ? AND status IN (?, ?)", 
+	db.DB.Where("tutor_id = ? AND appointment_date = ? AND status IN (?, ?)",
 		req.TutorID, req.AppointmentDate, "Pending", "Accepted").Find(&existingAppointments)
 
 	for _, appt := range existingAppointments {
@@ -104,9 +150,6 @@ func BookAppointment(c *gin.Context) {
 		utils.SendError(c, http.StatusInternalServerError, "Failed to create appointment")
 		return
 	}
-
-	// Increment session used
-	db.DB.Model(&sub).Update("sessions_used", sub.SessionsUsed+1)
 
 	utils.SendSuccess(c, http.StatusCreated, "Appointment booked successfully", appointment)
 }
@@ -159,4 +202,13 @@ func UpdateAppointmentStatus(c *gin.Context) {
 
 	db.DB.Save(&appointment)
 	utils.SendSuccess(c, http.StatusOK, "Appointment status updated", appointment)
+}
+
+// getPlanDetails returns subscription plan details by ID
+func getPlanDetails(planID int) (*model.SubscriptionPlan, error) {
+	var plan model.SubscriptionPlan
+	if err := db.DB.Where("id = ?", planID).First(&plan).Error; err != nil {
+		return nil, err
+	}
+	return &plan, nil
 }
